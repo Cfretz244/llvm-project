@@ -14614,8 +14614,23 @@ QualType Sema::CheckAddressOfOperand(ExprResult &OrigOp, SourceLocation OpLoc) {
             return QualType();
           }
 
-          while (cast<RecordDecl>(Ctx)->isAnonymousStructOrUnion())
+          // Walk out of any enclosing anonymous struct/union to find the
+          // named class that would own the pointer-to-member. A namespace- or
+          // block-scope anonymous union escapes into a non-record context; in
+          // that case there is no named class and no pointer-to-member can be
+          // formed. (Ordinary C++ cannot reach here for such a union, but a
+          // reflection splice of its member can.)
+          while (isa<RecordDecl>(Ctx) &&
+                 cast<RecordDecl>(Ctx)->isAnonymousStructOrUnion())
             Ctx = Ctx->getParent();
+
+          if (!isa<CXXRecordDecl>(Ctx)) {
+            Diag(OpLoc, diag::err_cannot_form_pointer_to_member_anon_union)
+                << dcl->getDeclName()
+                << Context.getTypeDeclType(
+                       cast<RecordDecl>(dcl->getDeclContext()));
+            return QualType();
+          }
 
           QualType MPTy = Context.getMemberPointerType(
               unwrapped->getType(), DRE->getQualifier(),

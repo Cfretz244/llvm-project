@@ -1241,6 +1241,13 @@ Sema::BuildMemberReferenceExpr(Scope *S, Expr *Base, SourceLocation OpLoc,
       return QT->getAsCXXRecordDecl()->getCanonicalDecl();
     }(Base->getType());
     CXXRecordDecl *BaseRecord = [](NamedDecl *ND) {
+      // A member of an anonymous union/struct named through an enclosing class
+      // is modeled by an IndirectFieldDecl whose DeclContext is that enclosing
+      // class. The member's *owning* class, however, is the anonymous aggregate
+      // that actually declares it -- so resolve to the underlying field to stay
+      // consistent with parent_of() and the pointer-to-member rules.
+      if (auto *IFD = dyn_cast<IndirectFieldDecl>(ND))
+        ND = IFD->getAnonField();
       DeclContext *DC = ND->getDeclContext();
       while (!isa<CXXRecordDecl>(DC)) {
         DC = DC->getParent();
