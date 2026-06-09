@@ -11,10 +11,10 @@ and `libc++`. It is, by a wide margin, **the most complete reflection implementa
 any Clang to date** — far ahead of what is in upstream `llvm/llvm-project`, where
 reflection is still a parser-only skeleton.
 
-This checkout tracks the fork's integration branch **`p2996`** (local branch
-`reflection-p2996`, remote `bloomberg`). The base is **LLVM 21.0.0git** — roughly two
-major versions behind upstream tip — because the fork is a deep feature branch, not a
-continuously-rebased tree. Upstream `llvm/llvm-project` remains the `origin` remote.
+This checkout is the umbrella repo's `llvm-project/` submodule, on branch
+**`reflection-p2996`** — bloomberg's `p2996` integration branch plus this prove-out's local
+fixes. The base is **LLVM 21.0.0git** — roughly two major versions behind upstream tip —
+because the fork is a deep feature branch, not a continuously-rebased tree.
 
 > **Experimental, not production.** The fork's own `P2996.md` warns: sharp edges abound,
 > crashes happen, memory use is wasteful. **Do not build production artifacts with it.**
@@ -25,9 +25,11 @@ Everything else below is standard LLVM. The structural fact that trips people up
 holds: **you do not point CMake at the repo root.** Point it at the `llvm/` subdirectory
 (or `runtimes/` for a runtimes-only build). The repo root has no top-level `CMakeLists.txt`.
 
-Remotes on this checkout: `bloomberg` (the p2996 fork, what `reflection-p2996` tracks),
-`origin` (upstream `llvm/llvm-project`), and `fork` (`git@github.com:Cfretz244/llvm-project.git`,
-the user's personal fork — note our local prove-out commits here are **not** pushed to it).
+Remotes on this checkout: the only remote is **`origin` =
+`git@github.com:Cfretz244/llvm-project.git`** (the user's personal fork) — push
+`reflection-p2996` there (the umbrella's submodule pin must be reachable from the fork).
+Neither upstream `llvm/llvm-project` nor `bloomberg/clang-p2996` is configured as a remote
+here; changes destined upstream are re-submitted from a separate checkout.
 
 ## This laptop: the reflection → Python bindings prove-out (read this)
 
@@ -36,12 +38,17 @@ reflection to *automatically generate Python bindings* (and other reflection-dri
 The umbrella repository is **`~/git/cpp26-reflect-nanobind`**, which pins this repo and the
 binder as submodules and carries the overall project CLAUDE.md.
 
-- **The toolchain is already built** at **`~/llvm-toolchain`** (clang/clang++/lld + a
-  from-source libc++ providing `<meta>`/`<experimental/meta>`). You normally do **not** need
-  to rebuild it; just use it. It was produced by the "Full reflection toolchain" build below.
-- **The bindings generator** lives in a separate repo, **`~/git/nanobind`** (branch
-  `mk-reflect`) — a reflection-driven nanobind binder. Its `CLAUDE.md` has the full story.
-  That repo is the active development surface; this repo is the compiler it runs on.
+- **The toolchain is already built** at **`~/git/cpp26-reflect-nanobind/toolchain`** (the
+  umbrella's repo-local install: clang/clang++/lld + a from-source libc++ providing
+  `<meta>`/`<experimental/meta>`), built **from this checkout** via the umbrella's
+  `toolchain-build/` tree. You normally do **not** need to rebuild it; just use it. (The
+  older `~/llvm-toolchain` is the same compiler built earlier — no longer used; do not
+  reference it.)
+- **The bindings generator** is the umbrella's **`nanobind/` submodule**
+  (`~/git/cpp26-reflect-nanobind/nanobind`, branch `mk-reflect`) — a reflection-driven
+  nanobind binder. Its `CLAUDE.md` has the full story. That checkout is the active
+  development surface; this repo is the compiler it runs on. (The older standalone
+  `~/git/nanobind` checkout is no longer used.)
 - **Standalone reflection demos** from this prove-out (a minimal walk and a complete
   reflection-driven binary/JSON serializer) live in `~/git/cpp26-reflect-nanobind/examples/`.
 - **Compiler gotcha discovered here and worked around in the binder**: a lambda whose
@@ -196,11 +203,14 @@ Apple Clang (`/usr/bin/clang`) is the bootstrap compiler; the macOS SDK comes fr
 
 **This is the build to use for reflection.** It produces a working `clang`/`clang++`/`lld`
 plus a from-source libc++/libc++abi/libunwind (which is what carries `<experimental/meta>`),
-installed under `~/llvm-toolchain`. With 64 GB RAM and 10 cores the defaults are fine;
+installed under the umbrella repo's `toolchain/` (build tree `toolchain-build/`, both at the
+umbrella root and git-ignored there — this is the canonical recipe from the umbrella's
+CLAUDE.md, run from the umbrella root). With 64 GB RAM and 10 cores the defaults are fine;
 assertions on for dev.
 
 ```bash
-cmake -S llvm -B build -G Ninja \
+cd ~/git/cpp26-reflect-nanobind
+cmake -S llvm-project/llvm -B toolchain-build -G Ninja \
   -DCMAKE_BUILD_TYPE=Release \
   -DLLVM_ENABLE_ASSERTIONS=ON \
   -DLLVM_ENABLE_PROJECTS="clang;lld" \
@@ -208,11 +218,11 @@ cmake -S llvm -B build -G Ninja \
   -DLLVM_TARGETS_TO_BUILD="AArch64" \
   -DLLVM_CCACHE_BUILD=ON \
   -DLLVM_OPTIMIZED_TABLEGEN=ON \
-  -DCMAKE_INSTALL_PREFIX="$HOME/llvm-toolchain"
+  -DCMAKE_INSTALL_PREFIX="$PWD/toolchain"
   # add -DLLVM_USE_LINKER=lld ONLY if an lld is already on PATH (see note below)
 
-ninja -C build                 # ~all targets; first build is long
-ninja -C build install         # installs clang/lld + libc++ headers (incl. <experimental/meta>) & libs
+ninja -C toolchain-build                 # ~all targets; first build is long
+ninja -C toolchain-build install         # installs clang/lld + libc++ headers (incl. <experimental/meta>) & libs
 ```
 
 Notes specific to this setup (verified by configuring on this machine):
@@ -229,7 +239,7 @@ headers (`ctype.h`, `mbstate_t`, …) aren't found and the compile fails. Note *
 `<experimental/meta>`:
 
 ```bash
-TC=~/llvm-toolchain
+TC=~/git/cpp26-reflect-nanobind/toolchain
 $TC/bin/clang++ -std=c++26 -freflection-latest -stdlib=libc++ \
   -isysroot "$(xcrun --show-sdk-path)" \
   -nostdinc++ -isystem $TC/include/c++/v1 \
@@ -422,14 +432,15 @@ Format only your changed lines with **`git clang-format`** (config: `.clang-form
 
 ## Contribution workflow
 
-**This is a fork, so the workflow differs from upstream LLVM.** Reflection changes target
-**`bloomberg/clang-p2996`** (the `bloomberg` remote), branched from its **`p2996`**
-integration branch — *not* `origin/main`. PRs and the issue tracker live at
+**In this checkout**: commit prove-out work on `reflection-p2996` and push to `origin` (the
+`Cfretz244/llvm-project` fork) so the umbrella's submodule pin is reachable. Upstreaming
+reflection fixes targets **`bloomberg/clang-p2996`**, branched from its **`p2996`**
+integration branch; PRs and the issue tracker live at
 [github.com/bloomberg/clang-p2996](https://github.com/bloomberg/clang-p2996). Keep history
 linear (rebase, no merge commits) and include tests (`clang/test/Reflection/`,
 `libcxx/test/std/experimental/reflection/`) with every functional change.
 
-Upstream LLVM (`origin`, `llvm/llvm-project`) is a separate destination: it uses GitHub PRs
+Upstream LLVM (`llvm/llvm-project`) is a separate destination: it uses GitHub PRs
 landed via **"Squash and Merge"** (Phabricator is retired), with reviewers listed in each
 component's `Maintainers.md` and Buildkite CI. The long-term plan is for production-grade
 reflection to land upstream incrementally; this fork is the reference it is being ported
