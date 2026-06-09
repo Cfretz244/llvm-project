@@ -19,3 +19,17 @@ __Znam
 __ZnamRKSt9nothrow_t
 __ZnamSt11align_val_t
 __ZnamSt11align_val_tRKSt9nothrow_t
+# Apple type-aware allocation operators (std::__type_descriptor_t variants), defined
+# by vendor/apple/shims.cpp. Recent clang emits calls to these when targeting macOS;
+# they must be exported so a from-source libc++abi is ABI-compatible with the system
+# library -- otherwise: dyld "Symbol not found: __ZnamSt19__type_descriptor_t".
+__ZnwmSt19__type_descriptor_t
+__ZnwmRKSt9nothrow_tSt19__type_descriptor_t
+__ZnamSt19__type_descriptor_t
+__ZnamRKSt9nothrow_tSt19__type_descriptor_t
+__ZdlPvSt19__type_descriptor_t
+__ZdlPvRKSt9nothrow_tSt19__type_descriptor_t
+__ZdlPvmSt19__type_descriptor_t
+__ZdaPvSt19__type_descriptor_t
+__ZdaPvRKSt9nothrow_tSt19__type_descriptor_t
+__ZdaPvmSt19__type_descriptor_t

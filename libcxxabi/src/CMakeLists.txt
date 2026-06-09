@@ -23,6 +23,19 @@ if (LIBCXXABI_ENABLE_NEW_DELETE_DEFINITIONS)
   list(APPEND LIBCXXABI_SOURCES
     stdlib_new_delete.cpp
   )
+  if (APPLE)
+    # Apple's system libc++ provides type-aware allocation operators
+    # (operator new/delete taking std::__type_descriptor_t) that recent clang
+    # emits calls to when targeting macOS. Upstream libc++ does not implement
+    # them, so a from-source libc++abi must compile this vendor shim to stay
+    # ABI-compatible with the system library -- otherwise programs abort at load
+    # with `dyld: Symbol not found: __ZnamSt19__type_descriptor_t`. The shim
+    # forwards each typed operator to the corresponding untyped one (the
+    # descriptor is an optional type-aware-allocation hint).
+    list(APPEND LIBCXXABI_SOURCES
+      vendor/apple/shims.cpp
+    )
+  endif()
 endif()
 
 if (LIBCXXABI_ENABLE_EXCEPTIONS)
