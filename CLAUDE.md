@@ -82,8 +82,8 @@ feature flag. The flags (defined in `clang/include/clang/Driver/Options.td`,
 | `-fexpansion-statements` | `template for` expansion statements (over init-lists / destructurables) | P1306 |
 | `-fattribute-reflection` | Reflection of standard attributes | P3385 |
 | `-fannotation-attributes` | Annotation attributes | P3394 |
-| `-fentity-proxy-reflection` | Entity-proxy reflection | (proposed) |
-| **`-freflection-latest`** | **Umbrella: turns on all of the above** plus consteval blocks (P3289), newer syntax (P3381), `define_static_*` (P3491), `define_enum` | all |
+| `-fentity-proxy-reflection` | Entity-proxy reflection: `using`-shadow declarations become enumerable via `members_of` (`is_entity_proxy` / `underlying_entity_of` / `proxied_entity_of`). **NOT implied by `-freflection-latest`** (verified empirically) — pass it explicitly. | (proposed) |
+| **`-freflection-latest`** | **Umbrella: turns on all of the above EXCEPT `-fentity-proxy-reflection`** plus consteval blocks (P3289), newer syntax (P3381), `define_static_*` (P3491), `define_enum` | all |
 
 **For the most functional stack, use `-freflection-latest`.** It is the single flag that
 unlocks every implemented feature. `-freflection` alone gets you conformant P2996 core only.
