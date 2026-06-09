@@ -25,6 +25,35 @@ Everything else below is standard LLVM. The structural fact that trips people up
 holds: **you do not point CMake at the repo root.** Point it at the `llvm/` subdirectory
 (or `runtimes/` for a runtimes-only build). The repo root has no top-level `CMakeLists.txt`.
 
+Remotes on this checkout: `bloomberg` (the p2996 fork, what `reflection-p2996` tracks),
+`origin` (upstream `llvm/llvm-project`), and `fork` (`git@github.com:Cfretz244/llvm-project.git`,
+the user's personal fork — note our local prove-out commits here are **not** pushed to it).
+
+## This laptop: the reflection → Python bindings prove-out (read this)
+
+This checkout is the **compiler half** of an ongoing investigation: using this fork's C++26
+reflection to *automatically generate Python bindings* (and other reflection-driven tooling).
+The umbrella repository is **`~/git/cpp26-reflect-nanobind`**, which pins this repo and the
+binder as submodules and carries the overall project CLAUDE.md.
+
+- **The toolchain is already built** at **`~/llvm-toolchain`** (clang/clang++/lld + a
+  from-source libc++ providing `<meta>`/`<experimental/meta>`). You normally do **not** need
+  to rebuild it; just use it. It was produced by the "Full reflection toolchain" build below.
+- **The bindings generator** lives in a separate repo, **`~/git/nanobind`** (branch
+  `mk-reflect`) — a reflection-driven nanobind binder. Its `CLAUDE.md` has the full story.
+  That repo is the active development surface; this repo is the compiler it runs on.
+- **Standalone reflection demos** from this prove-out (a minimal walk and a complete
+  reflection-driven binary/JSON serializer) live in `~/git/cpp26-reflect-nanobind/examples/`.
+- **Compiler gotcha discovered here and worked around in the binder**: a lambda whose
+  *signature* names a spliced type (`[:type_of(x):]` as a param/return type), passed to a
+  dependent call, crashes this fork's Itanium mangler (`UNREACHABLE … mangling a placeholder
+  type`). Keep spliced types out of lambda signatures (use pointer-to-member / concrete
+  types). A P3394 annotation value must also be a valid template argument (no `const char*`
+  members — use a fixed-size char array).
+
+To compile/run a reflection program against the prebuilt toolchain, see
+"Using the toolchain to compile a reflection program" below (the `-isysroot` is mandatory).
+
 ## The reflection stack (read this first)
 
 Reflection is **two pieces that must agree**: a `clang` that understands the `^^` operator
