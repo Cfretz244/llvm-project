@@ -440,6 +440,20 @@ integration branch; PRs and the issue tracker live at
 linear (rebase, no merge commits) and include tests (`clang/test/Reflection/`,
 `libcxx/test/std/experimental/reflection/`) with every functional change.
 
+**Tracking issue (maintain it!):** every reflection fix filed upstream from this prove-out
+is listed, categorized by root cause, on
+[bloomberg/clang-p2996#308](https://github.com/bloomberg/clang-p2996/issues/308). When you
+file a new issue+PR pair: add it there under its category (A identity/equality, B
+sugar-blind metafunctions, C member/namespace enumeration, D reflection-NTTP mangling, E
+constant-evaluator robustness; extend the taxonomy only when nothing fits) with a one-line
+description and its found-via provenance; note any stacking. When a PR merges, tick its
+checkbox. The fork-side mechanics per filing: cherry-pick the fix commit onto bloomberg's
+`p2996` tip on a dedicated `reflect-*` branch of `Cfretz244/llvm-project`, strip internal
+finding tags (TC-XXXX) from the commit message, validate that compiler (repro + regression
+test + `clang/test/Reflection` parity with base), then `gh issue create` + `gh pr create
+--base p2996 --head Cfretz244:<branch>`. The umbrella repo's
+`corpus/findings/repros/TC-XXXX/UPSTREAM.md` records numbers + validation evidence.
+
 Upstream LLVM (`llvm/llvm-project`) is a separate destination: it uses GitHub PRs
 landed via **"Squash and Merge"** (Phabricator is retired), with reviewers listed in each
 component's `Maintainers.md` and Buildkite CI. The long-term plan is for production-grade
