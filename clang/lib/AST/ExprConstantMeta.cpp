@@ -4787,9 +4787,11 @@ bool has_complete_definition(APValue &Result, ASTContext &C, MetaActions &Meta,
   case ReflectionKind::DataMemberSpec:
   case ReflectionKind::Annotation:
   case ReflectionKind::Attribute:
-    break;
+  // A using-shadow declaration is not itself a definable entity; member
+  // enumeration under -fentity-proxy-reflection may legitimately query it
+  // (crashing here turned a valid consteval query into an ICE).
   case ReflectionKind::EntityProxy:
-    llvm_unreachable("proxies should already have been unwrapped");
+    break;
   }
 
   return SetAndSucceed(Result, makeBool(C, result));
@@ -4828,9 +4830,11 @@ bool is_enumerable_type(APValue &Result, ASTContext &C, MetaActions &Meta,
   case ReflectionKind::DataMemberSpec:
   case ReflectionKind::Annotation:
   case ReflectionKind::Attribute:
-    break;
+  // A using-shadow declaration is not itself an enumerable type; member
+  // enumeration under -fentity-proxy-reflection may legitimately query it
+  // (crashing here turned a valid consteval query into an ICE).
   case ReflectionKind::EntityProxy:
-    llvm_unreachable("proxies should already have been unwrapped");
+    break;
   }
 
   return SetAndSucceed(Result, makeBool(C, result));
