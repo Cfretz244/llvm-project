@@ -20048,9 +20048,9 @@ ExprResult Sema::CheckLValueToRValueConversionOperand(Expr *E) {
   if (E->getType().isVolatileQualified() || E->getType()->getAs<RecordType>())
     return E;
 
-  auto &CEO = ExprEvalContexts.back().ConstevalOnly;
-  bool ReplaceConstevalOnly = E->getType()->isConstevalOnly() &&
-                              CEO.find(E) != CEO.end();
+  bool ReplaceConstevalOnly =
+      E->getType()->isConstevalOnly() &&
+      ExprEvalContexts.back().ConstevalOnly.contains(E);
 
   ExprResult Result =
       rebuildPotentialResultsAsNonOdrUsed(*this, E, NOUR_Constant);
@@ -20059,7 +20059,13 @@ ExprResult Sema::CheckLValueToRValueConversionOperand(Expr *E) {
 
   Result = Result.get() ? Result : E;
   if (ReplaceConstevalOnly)
-    CEO.insert(Result.get());
+    // Do not cache a reference to ConstevalOnly across the rebuild above: it
+    // can mark declarations used and trigger instantiation, which pushes
+    // expression evaluation contexts and may reallocate ExprEvalContexts,
+    // leaving such a reference dangling (same family as the reentrant
+    // consteval use-after-free fixed in PopExpressionEvaluationContext /
+    // HandleImmediateInvocations).
+    ExprEvalContexts.back().ConstevalOnly.insert(Result.get());
   return Result;
 }
 
