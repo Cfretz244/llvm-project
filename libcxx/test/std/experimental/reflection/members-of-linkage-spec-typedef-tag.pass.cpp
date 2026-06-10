@@ -39,9 +39,11 @@ consteval int count_after_entities() {
   int n = 0;
   for (auto m : std::meta::members_of(^^::,
                                       std::meta::access_context::unchecked())) {
-    if (std::meta::is_type(m) && std::meta::is_class_type(m) &&
-        std::meta::has_identifier(m) &&
-        std::meta::identifier_of(m) == "After")
+    // Identifier filter FIRST: probing is_class_type across every TU member
+    // would also exercise the (separately fixed) NEON-typedef mangling gap.
+    if (std::meta::has_identifier(m) &&
+        std::meta::identifier_of(m) == "After" &&
+        std::meta::is_type(m) && std::meta::is_class_type(m))
       ++n;
     if (std::meta::is_function(m) && !std::meta::is_template(m) &&
         std::meta::is_operator_function(m)) {
@@ -68,9 +70,9 @@ struct NsAfter { int z; };
 consteval bool ns_sees_after() {
   for (auto m : std::meta::members_of(^^wrapped,
                                       std::meta::access_context::unchecked()))
-    if (std::meta::is_type(m) && std::meta::is_class_type(m) &&
-        std::meta::has_identifier(m) &&
-        std::meta::identifier_of(m) == "NsAfter")
+    if (std::meta::has_identifier(m) &&
+        std::meta::identifier_of(m) == "NsAfter" &&
+        std::meta::is_type(m) && std::meta::is_class_type(m))
       return true;
   return false;
 }
